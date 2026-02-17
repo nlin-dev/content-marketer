@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from anthropic import AsyncAnthropic
 
-from app.ingestion import strip_code_fences
-from app.ingestion.pdf_parser import PageContent
+from app.ingestion.pdf_parser import PageContent, is_image_only, render_page_image
 from app.models.claim import ClaimCategory
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 VALID_CATEGORIES = {c.value for c in ClaimCategory}
 
 BATCH_SIZE = 3
+VISION_BATCH_SIZE = 2
 
 SYSTEM_PROMPT = """\
 You are extracting promotional medical claims from a pharmaceutical document.
@@ -45,6 +47,7 @@ async def extract_claims(
     *,
     api_key: str,
     model: str = "claude-sonnet-4-20250514",
+    pdf_path: Path | None = None,
 ) -> list[ExtractedClaim]:
     if not pages:
         return []
@@ -54,18 +57,25 @@ async def extract_claims(
         categories=", ".join(sorted(VALID_CATEGORIES)),
     )
 
+    use_vision = is_image_only(pages) and pdf_path is not None
+    batch_size = VISION_BATCH_SIZE if use_vision else BATCH_SIZE
+
     all_claims: list[ExtractedClaim] = []
-    for i in range(0, len(pages), BATCH_SIZE):
-        batch = pages[i : i + BATCH_SIZE]
-        page_text = "\n\n".join(
-            f"--- Page {p.page_number} ({p.filename}) ---\n{p.text}" for p in batch
-        )
+    for i in range(0, len(pages), batch_size):
+        batch = pages[i : i + batch_size]
+
+        if use_vision:
+            content = _build_image_content(batch, pdf_path, filename)
+        else:
+            content = "\n\n".join(
+                f"--- Page {p.page_number} ({p.filename}) ---\n{p.text}" for p in batch
+            )
 
         msg = await client.messages.create(
             model=model,
             max_tokens=4096,
             system=system,
-            messages=[{"role": "user", "content": page_text}],
+            messages=[{"role": "user", "content": content}],
         )
 
         response_text = msg.content[0].text
@@ -75,12 +85,30 @@ async def extract_claims(
     return all_claims
 
 
+def _build_image_content(
+    pages: list[PageContent], pdf_path: Path, filename: str
+) -> list[dict]:
+    content_blocks: list[dict] = []
+    for p in pages:
+        png_bytes = render_page_image(pdf_path, p.page_number)
+        b64 = base64.b64encode(png_bytes).decode()
+        content_blocks.append({
+            "type": "image",
+            "source": {"type": "base64", "media_type": "image/png", "data": b64},
+        })
+        content_blocks.append({
+            "type": "text",
+            "text": f"(Page {p.page_number} of {filename})",
+        })
+    return content_blocks
+
+
 def _parse_response(text: str, filename: str) -> list[ExtractedClaim]:
-    cleaned = strip_code_fences(text)
     try:
-        items = json.loads(cleaned)
-    except json.JSONDecodeError:
-        logger.warning("Failed to parse claim extraction response as JSON")
+        data = json.loads(text)
+        items = data.get("claims", data) if isinstance(data, dict) else data
+    except json.JSONDecodeError as e:
+        logger.warning("Failed to parse claim extraction response as JSON: %s — response: %.200s", e, text)
         return []
 
     claims: list[ExtractedClaim] = []
