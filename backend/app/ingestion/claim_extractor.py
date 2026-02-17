@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import logging
 from dataclasses import dataclass
@@ -8,7 +7,7 @@ from pathlib import Path
 
 from anthropic import AsyncAnthropic
 
-from app.ingestion.pdf_parser import PageContent, is_image_only, render_page_image
+from app.ingestion.pdf_parser import PageContent, build_image_content_blocks, is_image_only
 from app.models.claim import ClaimCategory
 
 logger = logging.getLogger(__name__)
@@ -65,7 +64,7 @@ async def extract_claims(
         batch = pages[i : i + batch_size]
 
         if use_vision:
-            content = _build_image_content(batch, pdf_path, filename)
+            content = build_image_content_blocks(batch, pdf_path, filename)
         else:
             content = "\n\n".join(
                 f"--- Page {p.page_number} ({p.filename}) ---\n{p.text}" for p in batch
@@ -84,23 +83,6 @@ async def extract_claims(
 
     return all_claims
 
-
-def _build_image_content(
-    pages: list[PageContent], pdf_path: Path, filename: str
-) -> list[dict]:
-    content_blocks: list[dict] = []
-    for p in pages:
-        png_bytes = render_page_image(pdf_path, p.page_number)
-        b64 = base64.b64encode(png_bytes).decode()
-        content_blocks.append({
-            "type": "image",
-            "source": {"type": "base64", "media_type": "image/png", "data": b64},
-        })
-        content_blocks.append({
-            "type": "text",
-            "text": f"(Page {p.page_number} of {filename})",
-        })
-    return content_blocks
 
 
 def _parse_response(text: str, filename: str) -> list[ExtractedClaim]:

@@ -69,12 +69,9 @@ async def _get_current_version(
 
 
 async def check_version(
-    db: AsyncSession, project_id: str, expected_version_id: str | None = None,
+    db: AsyncSession, project_id: str,
 ) -> ContentVersion | None:
-    current = await _get_current_version(db, project_id)
-    if expected_version_id and current and current.id != expected_version_id:
-        raise HTTPException(status_code=409, detail="Stale version — refresh and retry")
-    return current
+    return await _get_current_version(db, project_id)
 
 
 async def create_version(
@@ -145,9 +142,8 @@ async def generate(
     asset_ids: list[str],
     user_id: str,
     db: AsyncSession,
-    expected_version_id: str | None = None,
 ) -> dict:
-    current = await check_version(db, project_id, expected_version_id)
+    current = await check_version(db, project_id)
 
     claims_result = await db.execute(select(Claim).where(Claim.id.in_(claim_ids)))
     claims = list(claims_result.scalars().all())
@@ -187,9 +183,8 @@ async def edit(
     instruction: str,
     user_id: str,
     db: AsyncSession,
-    expected_version_id: str | None = None,
 ) -> dict:
-    current = await check_version(db, project_id, expected_version_id)
+    current = await check_version(db, project_id)
     if not current:
         raise HTTPException(status_code=400, detail="No existing version to edit")
 
@@ -202,6 +197,8 @@ async def edit(
     assets = list(assets_result.scalars().all())
 
     project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
     raw_html = await llm_assembly.edit_content(
         current.html_content, instruction, claims, assets, project,
@@ -232,9 +229,8 @@ async def direct_edit(
     html_content: str,
     user_id: str,
     db: AsyncSession,
-    expected_version_id: str | None = None,
 ) -> dict:
-    current = await check_version(db, project_id, expected_version_id)
+    current = await check_version(db, project_id)
     if not current:
         raise HTTPException(status_code=400, detail="No existing version to edit")
 
@@ -267,9 +263,8 @@ async def swap_asset(
     new_asset_id: str,
     user_id: str,
     db: AsyncSession,
-    expected_version_id: str | None = None,
 ) -> dict:
-    current = await check_version(db, project_id, expected_version_id)
+    current = await check_version(db, project_id)
     if not current:
         raise HTTPException(status_code=400, detail="No existing version to edit")
 
@@ -321,9 +316,8 @@ async def revert_to_version(
     target_version_id: str,
     user_id: str,
     db: AsyncSession,
-    expected_version_id: str | None = None,
 ) -> dict:
-    current = await check_version(db, project_id, expected_version_id)
+    current = await check_version(db, project_id)
 
     target = await db.get(ContentVersion, target_version_id)
     if not target or target.project_id != project_id:

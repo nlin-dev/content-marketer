@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from app.models import (
     UserRole,
     claim_sources,
 )
+
+logger = logging.getLogger(__name__)
 
 PDF_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 VISUAL_AID = PDF_DIR / "visual-aid.pdf"
@@ -61,14 +64,16 @@ async def seed():
             # Insert claims with embeddings
             for i, claim in enumerate(result.claims):
                 claim_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"claim-{claim.text[:50]}"))
+                embedding = result.embeddings[i] if i < len(result.embeddings) else None
+                if embedding is None:
+                    logger.warning("No embedding for claim %d: %s", i, claim.text[:60])
                 db_claim = Claim(
                     id=claim_id,
                     text=claim.text,
                     category=ClaimCategory(claim.category),
-                    embedding=result.embeddings[i] if i < len(result.embeddings) else None,
+                    embedding=embedding,
                 )
                 session.add(db_claim)
-                await session.flush()
 
                 # Link source reference
                 await session.execute(
@@ -104,8 +109,8 @@ async def seed():
                 ))
 
     print(
-        f"Seeded: 1 user, {result.claims_count} claims, "
-        f"{result.assets_count} assets, ISI={'yes' if result.isi_html else 'no'}"
+        f"Seeded: 1 user, {len(result.claims)} claims, "
+        f"{len(result.assets)} assets, ISI={'yes' if result.isi_html else 'no'}"
     )
 
 

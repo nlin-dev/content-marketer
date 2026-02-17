@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.ingestion.pdf_parser import PageContent, SectionContent, extract_pages, extract_sections
+from app.ingestion.pdf_parser import PageContent, SectionContent, extract_pages, extract_sections, render_page_image, is_image_only
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 VISUAL_AID = DATA_DIR / "visual-aid.pdf"
@@ -42,6 +42,30 @@ class TestExtractPages:
     def test_prescription_contains_fruzaqla(self, prescription_pages: list[PageContent]):
         all_text = " ".join(p.text for p in prescription_pages)
         assert "FRUZAQLA" in all_text or "fruquintinib" in all_text.lower()
+
+    def test_visual_aid_pages_are_image_only(self, visual_aid_pages: list[PageContent]):
+        image_only_pages = [p for p in visual_aid_pages if not p.has_text]
+        assert len(image_only_pages) > 0
+
+
+class TestRenderPageImage:
+    def test_returns_png_bytes(self):
+        result = render_page_image(VISUAL_AID, 1)
+        assert isinstance(result, bytes)
+        assert result[:8] == b"\x89PNG\r\n\x1a\n"
+
+    def test_respects_dpi(self):
+        low = render_page_image(VISUAL_AID, 1, dpi=72)
+        high = render_page_image(VISUAL_AID, 1, dpi=150)
+        assert len(high) > len(low)
+
+
+class TestIsImageOnly:
+    def test_visual_aid_is_image_only(self, visual_aid_pages: list[PageContent]):
+        assert is_image_only(visual_aid_pages) is True
+
+    def test_prescription_is_not_image_only(self, prescription_pages: list[PageContent]):
+        assert is_image_only(prescription_pages) is False
 
 
 class TestExtractSections:

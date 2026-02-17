@@ -4,12 +4,10 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from anthropic import AsyncAnthropic
-
 from app.ingestion.asset_extractor import ExtractedAsset, extract_assets
 from app.ingestion.claim_extractor import ExtractedClaim, extract_claims
 from app.ingestion.isi_extractor import extract_isi_html
-from app.ingestion.pdf_parser import extract_pages, extract_sections
+from app.ingestion.pdf_parser import PageContent, extract_pages, extract_sections, is_image_only
 from app.services.embedding import batch_generate_embeddings
 
 logger = logging.getLogger(__name__)
@@ -26,7 +24,7 @@ class IngestionResult:
 
 
 
-def classify_pdf(pdf_path: Path, pages: list | None = None) -> str:
+def classify_pdf(pdf_path: Path, pages: list[PageContent] | None = None) -> str:
     if pages is None:
         pages = extract_pages(pdf_path)
     sample = " ".join(p.text for p in pages[:3]).upper()
@@ -48,18 +46,19 @@ async def run_pipeline(
     isi_html: str | None = None
 
     for pdf_path in pdf_paths:
-        pdf_type = classify_pdf(pdf_path)
         pages = extract_pages(pdf_path)
+        pdf_type = classify_pdf(pdf_path, pages)
         filename = pdf_path.name
 
-        logger.info("Processing %s as %s (%d pages)", filename, pdf_type, len(pages))
+        mode = "vision" if is_image_only(pages) else "text"
+        logger.info("Processing %s as %s via %s (%d pages)", filename, pdf_type, mode, len(pages))
 
         # Extract claims from all PDFs
-        claims = await extract_claims(pages, filename, api_key=anthropic_api_key, model=model)
+        claims = await extract_claims(pages, filename, api_key=anthropic_api_key, model=model, pdf_path=pdf_path)
         all_claims.extend(claims)
 
         if pdf_type == "visual_aid":
-            assets = await extract_assets(pages, filename, api_key=anthropic_api_key, model=model)
+            assets = await extract_assets(pages, filename, api_key=anthropic_api_key, model=model, pdf_path=pdf_path)
             all_assets.extend(assets)
 
         elif pdf_type == "prescribing_info":

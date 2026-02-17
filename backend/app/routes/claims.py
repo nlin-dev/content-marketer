@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Claim, claim_sources
 from app.schemas import ClaimResponse, ClaimSearchResult, ClaimSourceResponse
+from app.services import claim_retrieval, orchestrator
 
 router = APIRouter(prefix="/api/claims", tags=["claims"])
 
@@ -28,14 +29,12 @@ async def _build_claim_response(claim: Claim, db: AsyncSession) -> ClaimResponse
     )
 
 
-@router.post("/discover", response_model=list[ClaimSearchResult])
+@router.get("/discover", response_model=list[ClaimSearchResult])
 async def discover_claims(
     q: str,
     db: AsyncSession = Depends(get_db),
 ) -> list[ClaimSearchResult]:
-    from app.services.orchestrator import discover_claims as _discover_claims
-
-    results = await _discover_claims(q, db, limit=10)
+    results = await orchestrator.discover_claims(q, db, limit=10)
     out: list[ClaimSearchResult] = []
     for item in results:
         claim_resp = await _build_claim_response(item["claim"], db)
@@ -48,9 +47,7 @@ async def search_claims(
     q: str,
     db: AsyncSession = Depends(get_db),
 ) -> list[ClaimSearchResult]:
-    from app.services.claim_retrieval import search_claims as _search_claims
-
-    results = await _search_claims(q, db)
+    results = await claim_retrieval.search_claims(q, db)
     out: list[ClaimSearchResult] = []
     for claim, distance in results:
         claim_resp = await _build_claim_response(claim, db)

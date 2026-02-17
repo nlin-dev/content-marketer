@@ -134,7 +134,8 @@ class TestBatchEmbeddingOrder:
         mock_response.data = [item_0, item_1, item_2]
 
         with patch("app.services.embedding.settings") as mock_settings, \
-             patch("app.services.embedding.openai.AsyncOpenAI") as mock_cls:
+             patch("app.services.embedding.openai.AsyncOpenAI") as mock_cls, \
+             patch("app.services.embedding._client", None):
             mock_settings.openai_api_key = "fake-key"
             mock_settings.openai_embedding_model = "text-embedding-3-small"
             client = AsyncMock()

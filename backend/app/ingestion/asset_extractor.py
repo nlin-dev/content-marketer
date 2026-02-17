@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import logging
 from dataclasses import dataclass
@@ -8,7 +7,7 @@ from pathlib import Path
 
 from anthropic import AsyncAnthropic
 
-from app.ingestion.pdf_parser import PageContent, is_image_only, render_page_image
+from app.ingestion.pdf_parser import PageContent, build_image_content_blocks, is_image_only
 from app.models.approved_asset import AssetType
 
 logger = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ async def extract_assets(
         all_assets: list[ExtractedAsset] = []
         for i in range(0, len(pages), VISION_BATCH_SIZE):
             batch = pages[i : i + VISION_BATCH_SIZE]
-            content = _build_image_content(batch, pdf_path, filename)
+            content = build_image_content_blocks(batch, pdf_path, filename)
             msg = await client.messages.create(
                 model=model,
                 max_tokens=4096,
@@ -85,23 +84,6 @@ async def extract_assets(
     response_text = msg.content[0].text.strip()
     return _parse_response(response_text, filename)
 
-
-def _build_image_content(
-    pages: list[PageContent], pdf_path: Path, filename: str
-) -> list[dict]:
-    content_blocks: list[dict] = []
-    for p in pages:
-        png_bytes = render_page_image(pdf_path, p.page_number)
-        b64 = base64.b64encode(png_bytes).decode()
-        content_blocks.append({
-            "type": "image",
-            "source": {"type": "base64", "media_type": "image/png", "data": b64},
-        })
-        content_blocks.append({
-            "type": "text",
-            "text": f"(Page {p.page_number} of {filename})",
-        })
-    return content_blocks
 
 
 def _parse_response(text: str, filename: str) -> list[ExtractedAsset]:

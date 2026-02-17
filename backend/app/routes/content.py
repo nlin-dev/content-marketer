@@ -1,11 +1,10 @@
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
-
 from app.database import async_session_maker, get_db
 from app.dependencies import get_current_user
 from app.models import (
@@ -30,6 +29,8 @@ from app.schemas import (
 )
 from app.schemas.compliance import ComplianceCheckResponse
 from app.services import llm_assembly, orchestrator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/content", tags=["content"])
 
@@ -182,6 +183,7 @@ async def generate_content_stream(
     request: GenerateRequest,
     user_id: str = Depends(get_current_user),
 ):
+    # Manual session: DI session closes before StreamingResponse generator runs.
     async with async_session_maker() as db:
         claims_result = await db.execute(
             select(Claim).where(Claim.id.in_(request.claim_ids))
@@ -219,6 +221,7 @@ async def generate_content_stream(
                 yield chunk
         except Exception:
             import json
-            yield f"data: {json.dumps({'error': 'Internal server error'})}\n\n"
+            logger.exception("SSE stream error")
+            yield f"data: {json.dumps({'error': 'Generation failed. Please try again.'})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

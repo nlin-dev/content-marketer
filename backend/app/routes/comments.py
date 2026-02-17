@@ -48,6 +48,7 @@ async def get_comments_for_version(
 async def resolve_comment(
     comment_id: str,
     body: CommentResolve,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CommentResponse:
     comment = await db.get(Comment, comment_id)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,7 @@ class PageContent:
     page_number: int
     text: str
     filename: str
+    has_text: bool = True
 
 
 @dataclass
@@ -29,8 +31,39 @@ def extract_pages(pdf_path: Path) -> list[PageContent]:
     with fitz.open(pdf_path) as doc:
         for i, page in enumerate(doc):
             text = page.get_text()
-            pages.append(PageContent(page_number=i + 1, text=text, filename=filename))
+            has_text = bool(text.strip())
+            pages.append(PageContent(page_number=i + 1, text=text, filename=filename, has_text=has_text))
     return pages
+
+
+def render_page_image(pdf_path: Path, page_number: int, dpi: int = 150) -> bytes:
+    with fitz.open(pdf_path) as doc:
+        page = doc[page_number - 1]
+        mat = fitz.Matrix(dpi / 72, dpi / 72)
+        pix = page.get_pixmap(matrix=mat)
+        return pix.tobytes("png")
+
+
+def is_image_only(pages: list[PageContent]) -> bool:
+    return len(pages) > 0 and all(not p.has_text for p in pages)
+
+
+def build_image_content_blocks(
+    pages: list[PageContent], pdf_path: Path, filename: str
+) -> list[dict]:
+    content_blocks: list[dict] = []
+    for p in pages:
+        png_bytes = render_page_image(pdf_path, p.page_number)
+        b64 = base64.b64encode(png_bytes).decode()
+        content_blocks.append({
+            "type": "image",
+            "source": {"type": "base64", "media_type": "image/png", "data": b64},
+        })
+        content_blocks.append({
+            "type": "text",
+            "text": f"(Page {p.page_number} of {filename})",
+        })
+    return content_blocks
 
 
 # Matches top-level prescribing info section headers like "5 WARNINGS AND PRECAUTIONS"
@@ -47,8 +80,6 @@ def extract_sections(pdf_path: Path) -> list[SectionContent]:
     if not pages:
         return []
 
-    # Build a single text with page markers so we can map back to page numbers
-    page_marker = "\n<<PAGE:{}>>\n"
     full_text = ""
     page_offsets: list[tuple[int, int, int]] = []  # (start_offset, end_offset, page_num)
     for p in pages:
@@ -56,7 +87,6 @@ def extract_sections(pdf_path: Path) -> list[SectionContent]:
         full_text += p.text
         end = len(full_text)
         page_offsets.append((start, end, p.page_number))
-        full_text += page_marker.format(p.page_number)
 
     # Find all section headers
     matches = list(_SECTION_HEADER_RE.finditer(full_text))

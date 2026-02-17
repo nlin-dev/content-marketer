@@ -52,6 +52,7 @@ async def get_project(
 async def update_project_brief(
     project_id: str,
     body: ProjectBriefUpdate,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProjectResponse:
     project = await db.get(Project, project_id)
