@@ -15,8 +15,14 @@ from app.models import (
     content_version_assets,
     content_version_claims,
 )
+import anthropic
+
 from app.services import audit, compliance, llm_assembly
 from app.services.claim_retrieval import search_claims
+
+
+class LLMError(Exception):
+    pass
 
 ALLOWED_TAGS = {
     "div", "p", "span", "h1", "h2", "h3", "h4", "img", "table", "tr", "td",
@@ -155,7 +161,10 @@ async def generate(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    raw_html = await llm_assembly.generate_content(claims, assets, project)
+    try:
+        raw_html = await llm_assembly.generate_content(claims, assets, project)
+    except anthropic.APIError as exc:
+        raise LLMError(str(exc)) from exc
     html = sanitize_html(raw_html)
     html = await append_isi(html, db)
 
@@ -200,9 +209,12 @@ async def edit(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    raw_html = await llm_assembly.edit_content(
-        current.html_content, instruction, claims, assets, project,
-    )
+    try:
+        raw_html = await llm_assembly.edit_content(
+            current.html_content, instruction, claims, assets, project,
+        )
+    except anthropic.APIError as exc:
+        raise LLMError(str(exc)) from exc
     html = sanitize_html(raw_html)
     html = await append_isi(html, db)
 

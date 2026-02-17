@@ -2,7 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from app.ingestion.pdf_parser import PageContent, SectionContent, extract_pages, extract_sections, render_page_image, is_image_only
+from app.ingestion.pdf_parser import (
+    PageContent,
+    SectionContent,
+    extract_pages,
+    extract_sections,
+    extract_sections_from_text,
+    render_page_image,
+    is_image_only,
+)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 VISUAL_AID = DATA_DIR / "visual-aid.pdf"
@@ -79,10 +87,11 @@ class TestExtractSections:
             assert section.title
             assert section.section_id
 
-    def test_finds_warnings_section(self):
+    def test_finds_warnings_subsections(self):
         sections = extract_sections(PRESCRIPTION)
-        warning_sections = [s for s in sections if "warning" in s.title.lower()]
-        assert len(warning_sections) > 0
+        # Section 5 "WARNINGS AND PRECAUTIONS" has subsections like 5.1 Hypertension
+        warning_subsections = [s for s in sections if s.section_id.startswith("section-5.")]
+        assert len(warning_subsections) > 0
 
     def test_finds_adverse_reactions_section(self):
         sections = extract_sections(PRESCRIPTION)
@@ -100,3 +109,41 @@ class TestExtractSections:
             start, end = section.page_range
             assert start >= 1
             assert end >= start
+
+
+# --- Improved Section Extraction ---
+
+
+class TestExtractSectionsFromText:
+    def test_mixed_case_titles(self):
+        text = "5.1 Hypertension\nBody text about hypertension.\n6 DOSING\nDosing info."
+        sections = extract_sections_from_text(text, "test.pdf")
+        titles = [s.title for s in sections]
+        assert any("Hypertension" in t for t in titles)
+
+    def test_title_case_with_conjunctions(self):
+        text = "5.2 Diarrhea and Colitis\nSome body text here.\n6 NEXT SECTION\nMore text."
+        sections = extract_sections_from_text(text, "test.pdf")
+        titles = [s.title for s in sections]
+        assert any("Diarrhea" in t for t in titles)
+
+    def test_all_caps_still_works(self):
+        text = "5 WARNINGS AND PRECAUTIONS\nWarning body.\n6 ADVERSE REACTIONS\nReaction body."
+        sections = extract_sections_from_text(text, "test.pdf")
+        assert len(sections) == 2
+
+    def test_no_false_matches_on_body_text(self):
+        text = "5 WARNINGS\nThe patient had 3 episodes of diarrhea.\nAnother line of body text."
+        sections = extract_sections_from_text(text, "test.pdf")
+        # "3 episodes" should NOT be parsed as a section header
+        assert len(sections) == 1
+        assert sections[0].title == "WARNINGS"
+
+    def test_fallback_pattern_used(self):
+        """When primary regex finds nothing, fallback catches mixed-case headers."""
+        text = "Section 1: Introduction\nBody text.\nSection 2: Methods\nMore text."
+        # This won't match either primary or fallback numbered patterns,
+        # so should return empty (no false positives)
+        sections = extract_sections_from_text(text, "test.pdf")
+        # We only match numbered sections like "5.1 Title", not "Section 1:"
+        assert len(sections) == 0

@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,8 +28,6 @@ from app.schemas import (
 )
 from app.schemas.compliance import ComplianceCheckResponse
 from app.services import llm_assembly, orchestrator
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/content", tags=["content"])
 
@@ -152,7 +149,7 @@ async def get_versions(
     ]
 
 
-@router.get("/{project_id}/version/{version_id}", response_model=VersionResponse)
+@router.get("/{project_id}/versions/{version_id}", response_model=VersionResponse)
 async def get_version(
     project_id: str,
     version_id: str,

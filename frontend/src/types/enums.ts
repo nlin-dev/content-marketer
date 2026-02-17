@@ -1,0 +1,10 @@
+export type UserRole = 'admin' | 'editor' | 'viewer';
+export type ContentType = 'email' | 'banner_ad' | 'social_post' | 'website' | 'brochure';
+export type Audience = 'hcp' | 'patient' | 'caregiver' | 'payer';
+export type Goal = 'awareness' | 'education' | 'conversion' | 'retention';
+export type Tone = 'professional' | 'empathetic' | 'urgent' | 'optimistic';
+export type ProjectStatus = 'draft' | 'in_review' | 'approved' | 'exported';
+export type ClaimCategory = 'efficacy_os' | 'efficacy_pfs' | 'safety' | 'moa' | 'dosing' | 'qol' | 'subgroups' | 'dcr' | 'unmet_need' | 'positioning';
+export type AssetType = 'image' | 'video' | 'document' | 'infographic';
+export type ComplianceStatus = 'pass' | 'fail' | 'warning';
+export type EventType = 'project_created' | 'version_created' | 'content_generated' | 'content_edited' | 'compliance_run' | 'comment_added' | 'exported';

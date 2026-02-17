@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -10,8 +11,14 @@ from app.routes.assets import router as assets_router
 from app.routes.content import router as content_router
 from app.routes.comments import router as comments_router
 from app.routes.export import router as export_router
+from app.services.orchestrator import LLMError
 
 app = FastAPI(title="Content Marketer")
+
+
+@app.exception_handler(LLMError)
+async def llm_error_handler(request: Request, exc: LLMError):
+    return JSONResponse(status_code=502, content={"detail": "AI service unavailable. Please try again."})
 
 app.add_middleware(
     CORSMiddleware,

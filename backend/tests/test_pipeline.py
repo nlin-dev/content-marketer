@@ -1,10 +1,19 @@
 import json
+import math
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.ingestion.pipeline import IngestionResult, classify_pdf, run_pipeline
+from app.ingestion.claim_extractor import ExtractedClaim
+from app.ingestion.pipeline import (
+    CoverageReport,
+    IngestionResult,
+    classify_pdf,
+    deduplicate_claims_with_embeddings,
+    extract_signal_tokens,
+    run_pipeline,
+)
 from app.ingestion.pdf_parser import is_image_only, extract_pages
 from app.services.embedding import batch_generate_embeddings
 
@@ -145,3 +154,100 @@ class TestBatchEmbeddingOrder:
             result = await batch_generate_embeddings(["a", "b", "c"])
 
         assert result == [emb_a, emb_b, emb_c]
+
+
+# --- Fuzzy Deduplication ---
+
+
+def _make_claim(text: str, confidence: float = 0.5, category: str = "efficacy_os") -> ExtractedClaim:
+    return ExtractedClaim(text=text, category=category, source_ref="f#a", confidence=confidence)
+
+
+def _unit_vec(components: list[float]) -> list[float]:
+    """Normalize a vector to unit length."""
+    mag = math.sqrt(sum(c * c for c in components))
+    return [c / mag for c in components]
+
+
+class TestFuzzyDeduplication:
+    def test_exact_duplicates_removed(self):
+        c1 = _make_claim("Same claim", confidence=0.9)
+        c2 = _make_claim("Same claim", confidence=0.8)
+        # Identical embeddings
+        emb = [1.0, 0.0, 0.0]
+        result = deduplicate_claims_with_embeddings([c1, c2], [emb, emb], threshold=0.95)
+        assert len(result) == 1
+        assert result[0].confidence == 0.9  # higher confidence kept
+
+    def test_near_duplicates_removed(self):
+        c1 = _make_claim("OS improved to 7.4 months", confidence=0.9)
+        c2 = _make_claim("Overall survival improved to 7.4 mo", confidence=0.7)
+        # Very similar embeddings (cosine > 0.95)
+        e1 = _unit_vec([1.0, 0.0, 0.0])
+        e2 = _unit_vec([0.99, 0.1, 0.0])
+        result = deduplicate_claims_with_embeddings([c1, c2], [e1, e2], threshold=0.95)
+        assert len(result) == 1
+
+    def test_dissimilar_claims_kept(self):
+        c1 = _make_claim("OS improved to 7.4 months", confidence=0.9)
+        c2 = _make_claim("Hypertension occurred in 49%", confidence=0.8)
+        e1 = _unit_vec([1.0, 0.0, 0.0])
+        e2 = _unit_vec([0.0, 1.0, 0.0])
+        result = deduplicate_claims_with_embeddings([c1, c2], [e1, e2], threshold=0.95)
+        assert len(result) == 2
+
+    def test_empty_input(self):
+        assert deduplicate_claims_with_embeddings([], [], threshold=0.95) == []
+
+    def test_single_claim(self):
+        c = _make_claim("Only claim")
+        result = deduplicate_claims_with_embeddings([c], [[1.0, 0.0]], threshold=0.95)
+        assert len(result) == 1
+
+
+# --- Coverage Verification ---
+
+
+class TestSignalTokenExtraction:
+    def test_extracts_percentages(self):
+        tokens = extract_signal_tokens("Hypertension occurred in 49% of patients")
+        assert "49%" in tokens
+
+    def test_extracts_hazard_ratios(self):
+        tokens = extract_signal_tokens("HR=0.66, 95% CI")
+        assert "HR=0.66" in tokens
+
+    def test_extracts_p_values(self):
+        tokens = extract_signal_tokens("p<0.001 was significant, also p=0.03")
+        assert "p<0.001" in tokens
+        assert "p=0.03" in tokens
+
+    def test_extracts_time_measurements(self):
+        tokens = extract_signal_tokens("OS was 7.4 months and PFS 3.7 months")
+        assert "7.4 months" in tokens
+        assert "3.7 months" in tokens
+
+    def test_extracts_dosing(self):
+        tokens = extract_signal_tokens("5 mg once daily for 21 days")
+        assert "5 mg" in tokens
+
+    def test_empty_text(self):
+        assert extract_signal_tokens("") == set()
+
+
+class TestCoverageReport:
+    def test_uncovered_tokens_detected(self):
+        source = "OS was 7.4 months (HR=0.66, p<0.001). Safety: hypertension 49%."
+        claims_text = "OS improved to 7.4 months with HR=0.66"
+        tokens = extract_signal_tokens(source)
+        covered = {t for t in tokens if t in claims_text}
+        uncovered = tokens - covered
+        assert "49%" in uncovered
+        assert "p<0.001" in uncovered
+
+    def test_full_coverage(self):
+        source = "HR=0.66"
+        claims_text = "The hazard ratio was HR=0.66"
+        tokens = extract_signal_tokens(source)
+        covered = {t for t in tokens if t in claims_text}
+        assert covered == tokens

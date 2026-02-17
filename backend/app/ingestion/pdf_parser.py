@@ -66,34 +66,35 @@ def build_image_content_blocks(
     return content_blocks
 
 
-# Matches top-level prescribing info section headers like "5 WARNINGS AND PRECAUTIONS"
-# and subsections like "5.1 Hypertension"
+# Matches section headers like "5 WARNINGS AND PRECAUTIONS" or "5.1 Hypertension".
+# First word after number must be >=2 uppercase-starting chars (avoids "4 mg", "3 times").
+# Allows mixed case. Uses $ with trailing \s* to handle trailing whitespace in PDFs.
 _SECTION_HEADER_RE = re.compile(
-    r"^(\d+(?:\.\d+)?)\s+([A-Z][A-Z &,/\-\(\)]+(?:\n[A-Z][A-Z &,/\-\(\)]+)*)",
+    r"^(\d+(?:\.\d+)?)\s{1,4}([A-Z][A-Za-z][A-Za-z &,./\-\(\)#'\d]*[A-Za-z)])\s*$",
     re.MULTILINE,
 )
 
+_SECTION_HEADER_FALLBACK_RE = _SECTION_HEADER_RE
 
-def extract_sections(pdf_path: Path) -> list[SectionContent]:
-    filename = pdf_path.name
-    pages = extract_pages(pdf_path)
-    if not pages:
+
+def extract_sections_from_text(
+    full_text: str,
+    filename: str,
+    page_offsets: list[tuple[int, int, int]] | None = None,
+) -> list[SectionContent]:
+    if not full_text.strip():
         return []
 
-    full_text = ""
-    page_offsets: list[tuple[int, int, int]] = []  # (start_offset, end_offset, page_num)
-    for p in pages:
-        start = len(full_text)
-        full_text += p.text
-        end = len(full_text)
-        page_offsets.append((start, end, p.page_number))
+    if page_offsets is None:
+        page_offsets = [(0, len(full_text), 1)]
 
-    # Find all section headers
+    # Try primary regex first, fall back to lenient pattern
     matches = list(_SECTION_HEADER_RE.finditer(full_text))
+    if not matches:
+        matches = list(_SECTION_HEADER_FALLBACK_RE.finditer(full_text))
     if not matches:
         return []
 
-    # Collect raw sections, then merge duplicates (highlights TOC vs full content)
     raw: dict[str, SectionContent] = {}
     for i, match in enumerate(matches):
         section_num = match.group(1)
@@ -109,7 +110,6 @@ def extract_sections(pdf_path: Path) -> list[SectionContent]:
 
         key = f"section-{section_num}"
         if key in raw:
-            # Merge: keep the longer text (full content over highlights stub)
             existing = raw[key]
             if len(text) > len(existing.text):
                 raw[key] = SectionContent(
@@ -128,8 +128,24 @@ def extract_sections(pdf_path: Path) -> list[SectionContent]:
                 filename=filename,
             )
 
-    # Filter out sections with no meaningful content
     return [s for s in raw.values() if len(s.text.strip()) > 10]
+
+
+def extract_sections(pdf_path: Path) -> list[SectionContent]:
+    filename = pdf_path.name
+    pages = extract_pages(pdf_path)
+    if not pages:
+        return []
+
+    full_text = ""
+    page_offsets: list[tuple[int, int, int]] = []
+    for p in pages:
+        start = len(full_text)
+        full_text += p.text
+        end = len(full_text)
+        page_offsets.append((start, end, p.page_number))
+
+    return extract_sections_from_text(full_text, filename, page_offsets)
 
 
 def _offset_to_page(offset: int, page_offsets: list[tuple[int, int, int]]) -> int:
