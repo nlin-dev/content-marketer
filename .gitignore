@@ -37,3 +37,7 @@ pgdata/
 .coverage
 htmlcov/
 .pytest_cache/
+.planning/
+
+# Database files
+*.db
