@@ -21,7 +21,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_id)
-    event_type: Mapped[EventType] = mapped_column(SAEnum(EventType), nullable=False)
+    event_type: Mapped[EventType] = mapped_column(SAEnum(EventType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     user_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("users.id"), nullable=True
     )

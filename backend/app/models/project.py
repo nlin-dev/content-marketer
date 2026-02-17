@@ -48,13 +48,13 @@ class Project(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_id)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     content_type: Mapped[ContentType] = mapped_column(
-        SAEnum(ContentType), nullable=False
+        SAEnum(ContentType, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
-    audience: Mapped[Audience] = mapped_column(SAEnum(Audience), nullable=False)
-    goal: Mapped[Goal] = mapped_column(SAEnum(Goal), nullable=False)
-    tone: Mapped[Tone] = mapped_column(SAEnum(Tone), nullable=False)
+    audience: Mapped[Audience] = mapped_column(SAEnum(Audience, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    goal: Mapped[Goal] = mapped_column(SAEnum(Goal, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    tone: Mapped[Tone] = mapped_column(SAEnum(Tone, values_callable=lambda e: [x.value for x in e]), nullable=False)
     status: Mapped[ProjectStatus] = mapped_column(
-        SAEnum(ProjectStatus), nullable=False, default=ProjectStatus.DRAFT
+        SAEnum(ProjectStatus, values_callable=lambda e: [x.value for x in e]), nullable=False, default=ProjectStatus.DRAFT
     )
     brief_responses: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     user_id: Mapped[str] = mapped_column(

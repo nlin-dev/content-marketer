@@ -18,6 +18,6 @@ class ApprovedAsset(TimestampMixin, Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_id)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    asset_type: Mapped[AssetType] = mapped_column(SAEnum(AssetType), nullable=False)
+    asset_type: Mapped[AssetType] = mapped_column(SAEnum(AssetType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)

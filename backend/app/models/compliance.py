@@ -21,6 +21,6 @@ class ComplianceRecord(TimestampMixin, Base):
     )
     check_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[ComplianceStatus] = mapped_column(
-        SAEnum(ComplianceStatus), nullable=False
+        SAEnum(ComplianceStatus, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
     details: Mapped[dict | None] = mapped_column(JSON, nullable=True)

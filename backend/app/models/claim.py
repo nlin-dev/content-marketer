@@ -42,7 +42,7 @@ class Claim(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_id)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     category: Mapped[ClaimCategory] = mapped_column(
-        SAEnum(ClaimCategory), nullable=False
+        SAEnum(ClaimCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
     embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
