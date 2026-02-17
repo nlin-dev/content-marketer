@@ -1,10 +1,12 @@
 import asyncio
-import os
 import uuid
+from pathlib import Path
 
 from sqlalchemy import text
 
+from app.config import settings
 from app.database import async_session_maker
+from app.ingestion.pipeline import run_pipeline
 from app.models import (
     ApprovedAsset,
     AssetType,
@@ -14,7 +16,10 @@ from app.models import (
     UserRole,
     claim_sources,
 )
-from app.seed_data import ASSETS, CLAIMS
+
+PDF_DIR = Path(__file__).resolve().parent.parent / "fixtures"
+VISUAL_AID = PDF_DIR / "visual-aid.pdf"
+PRESCRIPTION = PDF_DIR / "medication-prescription.pdf"
 
 
 async def truncate_all(session):
@@ -27,60 +32,25 @@ async def truncate_all(session):
     )
 
 
-async def generate_embeddings(texts: list[str]) -> list[list[float]]:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("WARNING: OPENAI_API_KEY not set, using zero vectors for embeddings")
-        return [[0.0] * 1536 for _ in texts]
-
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(api_key=api_key)
-    response = await client.embeddings.create(
-        model="text-embedding-3-small", input=texts
-    )
-    return [item.embedding for item in response.data]
-
-
-async def seed_claims(session, embeddings: list[list[float]]):
-    for i, claim_data in enumerate(CLAIMS):
-        claim = Claim(
-            id=claim_data["id"],
-            text=claim_data["text"],
-            category=ClaimCategory(claim_data["category"]),
-            embedding=embeddings[i],
-        )
-        session.add(claim)
-
-    await session.flush()
-
-    rows = []
-    for claim_data in CLAIMS:
-        for source in claim_data["sources"]:
-            rows.append({"claim_id": claim_data["id"], "source_id": source})
-    if rows:
-        await session.execute(claim_sources.insert().values(rows))
-
-
-async def seed_assets(session):
-    for asset_data in ASSETS:
-        session.add(ApprovedAsset(
-            id=asset_data["id"],
-            name=asset_data["name"],
-            asset_type=AssetType(asset_data["asset_type"]),
-            file_url=asset_data["file_url"],
-            metadata_=asset_data["metadata"],
-        ))
-
-
 async def seed():
-    texts = [c["text"] for c in CLAIMS]
-    embeddings = await generate_embeddings(texts)
+    pdf_paths = [p for p in [VISUAL_AID, PRESCRIPTION] if p.exists()]
+    if not pdf_paths:
+        print("ERROR: No PDF files found in fixtures/. Cannot seed.")
+        return
+
+    print(f"Ingesting {len(pdf_paths)} PDFs...")
+    result = await run_pipeline(
+        pdf_paths,
+        anthropic_api_key=settings.anthropic_api_key,
+        openai_api_key=settings.openai_api_key,
+        model=settings.anthropic_model,
+    )
 
     async with async_session_maker() as session:
         async with session.begin():
             await truncate_all(session)
 
+            # Default dev user
             session.add(User(
                 id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "user-dev")),
                 email="dev@example.com",
@@ -88,10 +58,55 @@ async def seed():
                 role=UserRole.EDITOR,
             ))
 
-            await seed_claims(session, embeddings)
-            await seed_assets(session)
+            # Insert claims with embeddings
+            for i, claim in enumerate(result.claims):
+                claim_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"claim-{claim.text[:50]}"))
+                db_claim = Claim(
+                    id=claim_id,
+                    text=claim.text,
+                    category=ClaimCategory(claim.category),
+                    embedding=result.embeddings[i] if i < len(result.embeddings) else None,
+                )
+                session.add(db_claim)
+                await session.flush()
 
-    print(f"Seeded: 1 user, {len(CLAIMS)} claims, {len(ASSETS)} assets")
+                # Link source reference
+                await session.execute(
+                    claim_sources.insert().values(
+                        claim_id=claim_id, source_id=claim.source_ref
+                    )
+                )
+
+            # Insert assets
+            for asset in result.assets:
+                asset_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"asset-{asset.slug}"))
+                session.add(ApprovedAsset(
+                    id=asset_id,
+                    name=asset.name,
+                    asset_type=AssetType(asset.asset_type),
+                    file_url=f"/static/assets/{asset.slug}.svg",
+                    metadata_={
+                        "description": asset.name,
+                        "source_pdf": asset.filename,
+                        "source_page": asset.source_page,
+                    },
+                ))
+
+            # Insert ISI as a document asset
+            if result.isi_html:
+                isi_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "asset-isi-block"))
+                session.add(ApprovedAsset(
+                    id=isi_id,
+                    name="ISI Block",
+                    asset_type=AssetType.DOCUMENT,
+                    file_url="/static/assets/isi-block.html",
+                    metadata_={"html": result.isi_html},
+                ))
+
+    print(
+        f"Seeded: 1 user, {result.claims_count} claims, "
+        f"{result.assets_count} assets, ISI={'yes' if result.isi_html else 'no'}"
+    )
 
 
 if __name__ == "__main__":
