@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAssetsStore } from '@/stores/assets';
 import { useNavigationStore } from '@/stores/navigation';
+import { useUiStore } from '@/stores/ui';
 import { getAssets } from '@/lib/api';
 import type { AssetResponse } from '@/types';
 import { cn } from '@/lib/utils';
@@ -27,7 +28,7 @@ export function AssetPicker() {
     setLoading(true);
     getAssets(filter)
       .then(setAvailable)
-      .catch(console.error)
+      .catch((err) => useUiStore.getState().setError(err instanceof Error ? err.message : 'Failed to load assets'))
       .finally(() => setLoading(false));
   }, [typeFilter, setAvailable]);
 
@@ -45,7 +46,7 @@ export function AssetPicker() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm cursor-pointer focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         >
           {ASSET_TYPE_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>
@@ -55,9 +56,9 @@ export function AssetPicker() {
         </select>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading assets...</p>
+          <p className="text-sm text-slate-500">Loading assets...</p>
         ) : available.length === 0 ? (
-          <p className="text-sm text-gray-500">No assets found.</p>
+          <p className="text-sm text-slate-500">No assets found.</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {available.map((asset) => {
@@ -68,14 +69,14 @@ export function AssetPicker() {
                   padding={false}
                   className={cn(
                     'relative cursor-pointer overflow-hidden transition-colors',
-                    isSelected && 'ring-2 ring-blue-500',
+                    isSelected && 'ring-2 ring-primary-500',
                   )}
                 >
                   <button
                     onClick={() => toggle(asset)}
                     className="w-full text-left"
                   >
-                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                    <div className="aspect-video bg-slate-100 flex items-center justify-center">
                       {asset.asset_type === 'image' ? (
                         <img
                           src={asset.file_url}
@@ -83,18 +84,18 @@ export function AssetPicker() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-gray-400 text-xs uppercase">
+                        <span className="text-slate-400 text-xs uppercase">
                           {asset.asset_type}
                         </span>
                       )}
                     </div>
                     <div className="p-3 space-y-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-slate-900 truncate">
                         {asset.name}
                       </p>
                       <Badge color="gray">{asset.asset_type}</Badge>
                       {isSelected && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-blue-600 rounded text-white flex items-center justify-center text-xs">
+                        <div className="absolute top-2 right-2 w-5 h-5 bg-primary-500 rounded text-white flex items-center justify-center text-xs">
                           &#10003;
                         </div>
                       )}
@@ -107,8 +108,8 @@ export function AssetPicker() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-3 flex items-center justify-between z-10">
-        <span className="text-sm text-gray-600">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between z-10 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+        <span className="text-sm text-slate-600">
           {selected.length} asset{selected.length !== 1 ? 's' : ''} selected
         </span>
         <Button onClick={nextStep}>

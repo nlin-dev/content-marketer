@@ -51,9 +51,16 @@ export function Bootstrap({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <nav className="bg-navy-900 text-white px-6 py-3 flex items-center justify-between">
-        <span className="font-semibold text-lg">Content Marketer</span>
-        {user && <span className="text-sm text-navy-200">{user.display_name}</span>}
+      <nav className="bg-navy-950 text-white px-6 py-3 flex items-center justify-between border-b border-navy-800">
+        <span className="font-semibold text-base tracking-tight">Content Marketer</span>
+        {user && (
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-primary-500/20 text-primary-300 flex items-center justify-center text-xs font-medium">
+              {user.display_name.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-sm text-navy-300">{user.display_name}</span>
+          </div>
+        )}
       </nav>
       {children}
     </>

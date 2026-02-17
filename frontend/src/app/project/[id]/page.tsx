@@ -9,9 +9,11 @@ import { useClaimsStore } from '@/stores/claims';
 import { useAssetsStore } from '@/stores/assets';
 import { useContentStore } from '@/stores/content';
 import { useComplianceStore } from '@/stores/compliance';
+import { useUiStore } from '@/stores/ui';
 import { getProject } from '@/lib/api';
 import { STEPS } from '@/lib/constants';
 import { Spinner } from '@/components/ui/Spinner';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { ConversationalBrief } from '@/components/brief/ConversationalBrief';
 import { ClaimDiscovery } from '@/components/claims/ClaimDiscovery';
 import { AssetPicker } from '@/components/assets/AssetPicker';
@@ -51,6 +53,8 @@ export default function ProjectPage() {
   const resetAssets = useAssetsStore((s) => s.reset);
   const resetContent = useContentStore((s) => s.reset);
   const resetCompliance = useComplianceStore((s) => s.reset);
+  const error = useUiStore((s) => s.error);
+  const setError = useUiStore((s) => s.setError);
 
   useEffect(() => {
     setStep(0);
@@ -60,7 +64,9 @@ export default function ProjectPage() {
     resetCompliance();
     setProject(null);
 
-    getProject(id).then(setProject).catch(console.error);
+    getProject(id).then(setProject).catch((err) => {
+      useUiStore.getState().setError(err instanceof Error ? err.message : 'Failed to load project');
+    });
   }, [id, setStep, setProject, resetClaims, resetAssets, resetContent, resetCompliance]);
 
   const stepKey = STEPS[currentStep].key;
@@ -77,9 +83,12 @@ export default function ProjectPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-52px)]">
-      <div className="border-b bg-white">
-        <div className="flex items-center justify-between px-6 py-2">
-          <h1 className="text-lg font-semibold text-navy-900">{project.name}</h1>
+      {error && (
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      )}
+      <div className="border-b border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-2.5">
+          <h1 className="text-base font-semibold text-slate-900">{project.name}</h1>
         </div>
         <StepIndicator />
       </div>
@@ -89,7 +98,7 @@ export default function ProjectPage() {
           {(() => { const StepComponent = STEP_COMPONENTS[stepKey]; return StepComponent ? <StepComponent /> : null; })()}
         </main>
         {showSidePanel && (
-          <aside className="w-96 border-l overflow-y-auto p-4 bg-gray-50">
+          <aside className="w-96 border-l border-slate-200 overflow-y-auto p-4 bg-slate-50">
             <SidePanel stepKey={stepKey} projectId={id} />
           </aside>
         )}

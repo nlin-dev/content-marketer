@@ -27,7 +27,7 @@ export function DirectEditor() {
       (node as HTMLElement).contentEditable = 'false';
     });
     el.querySelectorAll('[data-claim-id]').forEach((node) => {
-      (node as HTMLElement).classList.add('bg-blue-50', 'rounded', 'px-0.5');
+      (node as HTMLElement).classList.add('bg-primary-50', 'rounded', 'px-0.5');
     });
   }
 
@@ -105,7 +105,7 @@ export function DirectEditor() {
         contentEditable
         suppressContentEditableWarning
         onClick={handleClick}
-        className="prose max-w-none rounded-lg border border-gray-200 p-6 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="prose max-w-none rounded-lg border border-slate-200 p-6 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
       {swapAssetId && (
         <AssetSwapModal

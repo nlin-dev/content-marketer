@@ -11,12 +11,12 @@ export function Input({ label, className, id, ...props }: InputProps) {
   const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+      <label htmlFor={inputId} className="text-sm font-medium text-slate-700">
         {label}
       </label>
       <input
         id={inputId}
-        className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         {...props}
       />
     </div>

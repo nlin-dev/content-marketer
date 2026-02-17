@@ -46,7 +46,7 @@ export function ExportPanel() {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
           <div className="text-2xl mb-2">&#10003;</div>
-          <h2 className="text-xl font-semibold text-green-900">Content Exported</h2>
+          <h2 className="text-lg font-semibold text-green-900">Content Exported</h2>
           <p className="text-sm text-green-700 mt-1">
             {project?.name} — exported {new Date(exportResult.exported_at).toLocaleString()}
           </p>
@@ -58,9 +58,9 @@ export function ExportPanel() {
           </Button>
         </div>
 
-        <div className="rounded-lg border p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">HTML Preview</h3>
-          <div className="max-h-64 overflow-y-auto rounded bg-gray-50 p-3 text-xs font-mono text-gray-600 whitespace-pre-wrap break-all">
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="text-sm font-medium text-slate-700 mb-2">HTML Preview</h3>
+          <div className="max-h-64 overflow-y-auto rounded bg-slate-50 p-3 text-xs font-mono text-slate-600 whitespace-pre-wrap break-all">
             {exportResult.html_content}
           </div>
         </div>
@@ -71,15 +71,15 @@ export function ExportPanel() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Export Content</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-lg font-semibold text-slate-900">Export Content</h2>
+        <p className="text-sm text-slate-500 mt-1">
           Export the current version for use in your campaign.
         </p>
       </div>
 
-      <div className="rounded-lg border p-4 space-y-3">
+      <div className="rounded-lg border border-slate-200 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Compliance Status</span>
+          <span className="text-sm font-medium text-slate-700">Compliance Status</span>
           {overallStatus ? (
             <Badge color={allPassed ? 'green' : 'red'}>
               {allPassed ? 'All Checks Passed' : 'Issues Found'}

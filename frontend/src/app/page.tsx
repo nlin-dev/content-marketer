@@ -46,8 +46,8 @@ export default function HomePage() {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-52px)]">
       <Card className="w-full max-w-lg">
-        <h1 className="text-2xl font-semibold text-navy-900">New Project</h1>
-        <p className="mt-1 text-sm text-gray-500">Email campaign</p>
+        <h1 className="text-xl font-semibold text-slate-900">New Project</h1>
+        <p className="mt-1 text-sm text-slate-500">Create a new email campaign to get started.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Input

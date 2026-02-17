@@ -4,6 +4,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,
     Enum as SAEnum,
+    Float,
     ForeignKey,
     Index,
     String,
@@ -44,6 +45,7 @@ class Claim(TimestampMixin, Base):
     category: Mapped[ClaimCategory] = mapped_column(
         SAEnum(ClaimCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
+    confidence: Mapped[float] = mapped_column(Float, default=0.5, server_default="0.5")
     embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
 

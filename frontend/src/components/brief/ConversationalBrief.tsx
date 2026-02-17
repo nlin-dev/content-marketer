@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useProjectStore } from '@/stores/project';
 import { useNavigationStore } from '@/stores/navigation';
+import { useUiStore } from '@/stores/ui';
 import { updateBrief } from '@/lib/api';
 
 const QUESTIONS = [
@@ -40,9 +41,12 @@ export function ConversationalBrief() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [freeText, setFreeText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
 
   const advance = useCallback(
     async (questionIndex: number, answer: string) => {
+      if (advancing) return;
+      setAdvancing(true);
       const q = QUESTIONS[questionIndex];
       const newAnswers = { ...answers, [q.id]: answer };
       setAnswers(newAnswers);
@@ -57,6 +61,7 @@ export function ConversationalBrief() {
         newMessages.push({ role: 'system', text: QUESTIONS[nextQ].text });
         setMessages(newMessages);
         setCurrentQ(nextQ);
+        setAdvancing(false);
       } else {
         setMessages(newMessages);
         setCurrentQ(QUESTIONS.length);
@@ -65,12 +70,13 @@ export function ConversationalBrief() {
           await updateBrief(project!.id, { brief_responses: newAnswers });
           nextStep();
         } catch (err) {
-          console.error('Failed to save brief:', err);
+          useUiStore.getState().setError(err instanceof Error ? err.message : 'Failed to save brief');
           setSubmitting(false);
+          setAdvancing(false);
         }
       }
     },
-    [answers, messages, project, nextStep],
+    [answers, messages, project, nextStep, advancing],
   );
 
   const handlePill = (pill: string) => advance(currentQ, pill);
@@ -99,25 +105,26 @@ export function ConversationalBrief() {
             <div
               className={
                 msg.role === 'system'
-                  ? 'bg-gray-100 text-gray-900 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]'
-                  : 'bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%]'
+                  ? 'bg-slate-100 text-slate-900 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%] text-sm'
+                  : 'bg-primary-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] text-sm'
               }
             >
-              {msg.text || <span className="italic text-gray-400">Skipped</span>}
+              {msg.text || <span className="italic text-slate-400">Skipped</span>}
             </div>
           </div>
         ))}
       </div>
 
       {currentQuestion && !submitting && (
-        <div className="border-t bg-white py-4 space-y-3">
+        <div className="border-t border-slate-200 bg-white py-4 space-y-3">
           {currentQuestion.pills ? (
             <div className="flex flex-wrap gap-2">
               {currentQuestion.pills.map((pill) => (
                 <button
                   key={pill}
                   onClick={() => handlePill(pill)}
-                  className="px-4 py-2 rounded-full border border-gray-300 text-sm font-medium hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  disabled={advancing || submitting}
+                  className="px-4 py-2 rounded-full border border-slate-200 text-sm font-medium cursor-pointer hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {pill}
                 </button>
@@ -133,7 +140,7 @@ export function ConversationalBrief() {
                   if (e.key === 'Enter') handleFreeText();
                 }}
                 placeholder="Type your response..."
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
               <Button onClick={handleFreeText} size="sm">
                 Send
@@ -147,7 +154,7 @@ export function ConversationalBrief() {
       )}
 
       {submitting && (
-        <div className="border-t bg-white py-4 text-center text-sm text-gray-500">
+        <div className="border-t border-slate-200 bg-white py-4 text-center text-sm text-slate-500">
           Saving brief...
         </div>
       )}

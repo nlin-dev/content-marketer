@@ -71,6 +71,7 @@ async def seed():
                     id=claim_id,
                     text=claim.text,
                     category=ClaimCategory(claim.category),
+                    confidence=claim.confidence,
                     embedding=embedding,
                 )
                 session.add(db_claim)
@@ -108,9 +109,12 @@ async def seed():
                     metadata_={"html": result.isi_html},
                 ))
 
+    coverage_info = ""
+    if result.coverage:
+        coverage_info = f", coverage={result.coverage.coverage_ratio:.1%}"
     print(
         f"Seeded: 1 user, {len(result.claims)} claims, "
-        f"{len(result.assets)} assets, ISI={'yes' if result.isi_html else 'no'}"
+        f"{len(result.assets)} assets, ISI={'yes' if result.isi_html else 'no'}{coverage_info}"
     )
 
 

@@ -18,6 +18,11 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# Override sqlalchemy.url from DATABASE_URL env var if set
+_db_url = os.environ.get("DATABASE_URL")
+if _db_url:
+    config.set_main_option("sqlalchemy.url", _db_url)
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode — emit SQL to stdout."""

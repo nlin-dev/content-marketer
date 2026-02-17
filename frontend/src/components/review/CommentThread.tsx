@@ -64,7 +64,7 @@ export function CommentThread() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-gray-900">Comments</h3>
+        <h3 className="text-sm font-semibold text-slate-900">Comments</h3>
         {unresolvedCount > 0 && (
           <Badge color="amber">{unresolvedCount} unresolved</Badge>
         )}
@@ -75,24 +75,24 @@ export function CommentThread() {
           <div
             key={comment.id}
             className={`rounded-md border px-3 py-2 ${
-              comment.resolved ? 'border-gray-100 bg-gray-50' : 'border-gray-200'
+              comment.resolved ? 'border-slate-100 bg-slate-50' : 'border-slate-200'
             }`}
           >
             <div className="flex items-center justify-between">
               <span
                 className={`text-xs font-medium ${
-                  comment.resolved ? 'text-gray-400' : 'text-gray-700'
+                  comment.resolved ? 'text-slate-400' : 'text-slate-700'
                 }`}
               >
                 {comment.user_id}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-slate-400">
                 {formatRelativeTime(comment.created_at)}
               </span>
             </div>
             <p
               className={`mt-1 text-sm ${
-                comment.resolved ? 'text-gray-400 line-through' : 'text-gray-700'
+                comment.resolved ? 'text-slate-400 line-through' : 'text-slate-700'
               }`}
             >
               {comment.text}
@@ -124,7 +124,7 @@ export function CommentThread() {
             }
           }}
           placeholder="Add a comment..."
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         />
         <Button
           size="sm"

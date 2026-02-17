@@ -67,8 +67,8 @@ export function ContentEditor() {
   // No content yet — show generate button
   if (!hasContent && !streaming) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-gray-300 p-12">
-        <p className="text-sm text-gray-500">
+      <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-slate-300 p-12">
+        <p className="text-sm text-slate-500">
           Select claims and assets, then generate content.
         </p>
         <Button onClick={handleGenerate} disabled={selectedClaims.length === 0}>
@@ -83,7 +83,7 @@ export function ContentEditor() {
     return (
       <div className="flex items-center justify-center gap-2 p-12">
         <Spinner size="md" />
-        <span className="text-sm text-gray-500">Generating content...</span>
+        <span className="text-sm text-slate-500">Generating content...</span>
       </div>
     );
   }
@@ -91,12 +91,12 @@ export function ContentEditor() {
   if (streaming && hasContent) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-sm text-blue-600">
+        <div className="flex items-center gap-2 text-sm text-primary-600">
           <Spinner size="sm" />
           Generating...
         </div>
         <div
-          className="prose max-w-none rounded-lg border border-gray-200 p-6"
+          className="prose max-w-none rounded-lg border border-slate-200 p-6"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentHtml, { ALLOW_DATA_ATTR: true }) }}
         />
       </div>

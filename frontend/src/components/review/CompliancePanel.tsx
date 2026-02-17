@@ -11,13 +11,13 @@ function CheckItem({ check }: { check: ComplianceCheckResponse }) {
   const config = COMPLIANCE_STATUS_CONFIG[check.status];
 
   return (
-    <div className="border border-gray-200 rounded-md">
+    <div className="border border-slate-200 rounded-md">
       <button
         type="button"
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
+        className="flex w-full items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-slate-50"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="text-sm font-medium text-gray-900">
+        <span className="text-sm font-medium text-slate-900">
           {check.check_name}
         </span>
         <div className="flex items-center gap-2">
@@ -25,7 +25,7 @@ function CheckItem({ check }: { check: ComplianceCheckResponse }) {
             {config.label}
           </Badge>
           <svg
-            className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            className={`h-4 w-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -35,17 +35,17 @@ function CheckItem({ check }: { check: ComplianceCheckResponse }) {
         </div>
       </button>
       {expanded && check.details && (
-        <div className="border-t border-gray-200 px-4 py-3 text-sm text-gray-600">
+        <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
           {check.details.detail != null && (
             <p>{String(check.details.detail)}</p>
           )}
           {check.details.claim != null && (
-            <p className="mt-2 italic text-gray-500">
+            <p className="mt-2 italic text-slate-500">
               {'Referenced claim: '}{String(check.details.claim)}
             </p>
           )}
           {check.details.text != null && (
-            <p className="mt-2 italic text-gray-500">
+            <p className="mt-2 italic text-slate-500">
               {'Referenced text: '}{String(check.details.text)}
             </p>
           )}

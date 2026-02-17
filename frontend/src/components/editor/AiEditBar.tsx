@@ -35,7 +35,7 @@ export function AiEditBar() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="flex gap-2">
         <input
           type="text"
@@ -43,7 +43,7 @@ export function AiEditBar() {
           onChange={(e) => setInstruction(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && applyEdit(instruction)}
           placeholder="Describe how to edit the content..."
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           disabled={loading}
         />
         <Button

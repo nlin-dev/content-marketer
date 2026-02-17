@@ -2,7 +2,8 @@ const BACKEND = process.env.BACKEND_URL || 'http://localhost:8000';
 
 async function proxy(request: Request) {
   const url = new URL(request.url);
-  const target = `${BACKEND}${url.pathname}${url.search}`;
+  const path = url.pathname.replace(/^\/api/, '');
+  const target = `${BACKEND}${path}${url.search}`;
 
   const headers = new Headers(request.headers);
   headers.delete('host');
@@ -18,7 +19,7 @@ async function proxy(request: Request) {
     init.duplex = 'half';
   }
 
-  const res = await fetch(target, init);
+  const res = await fetch(target, { ...init, redirect: 'manual' });
 
   const responseHeaders = new Headers(res.headers);
   responseHeaders.delete('transfer-encoding');

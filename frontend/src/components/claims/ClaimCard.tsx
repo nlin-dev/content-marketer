@@ -30,16 +30,16 @@ export function ClaimCard({ claim }: ClaimCardProps) {
     <button
       onClick={toggle}
       className={cn(
-        'w-full text-left rounded-lg border p-4 transition-colors hover:bg-gray-50',
-        isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200',
+        'w-full text-left rounded-lg border p-4 transition-colors cursor-pointer hover:bg-slate-50',
+        isSelected ? 'border-primary-500 bg-primary-50/50 shadow-sm' : 'border-slate-200',
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <Badge color={config.color as 'blue'}>{config.label}</Badge>
       </div>
-      <p className="text-sm text-gray-900 leading-relaxed">{claim.text}</p>
+      <p className="text-sm text-slate-900 leading-relaxed">{claim.text}</p>
       {claim.sources.length > 0 && (
-        <p className="mt-2 text-xs text-gray-500 truncate">
+        <p className="mt-2 text-xs text-slate-500 truncate">
           Source: {claim.sources[0].source_id}
         </p>
       )}

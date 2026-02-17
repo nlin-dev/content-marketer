@@ -53,22 +53,22 @@ export function VersionTimeline({ projectId }: VersionTimelineProps) {
           <div key={version.id} className="relative flex gap-3 pb-6">
             {/* Vertical line */}
             {!isLast && (
-              <div className="absolute left-[7px] top-4 h-full w-0.5 bg-gray-200" />
+              <div className="absolute left-[7px] top-4 h-full w-0.5 bg-slate-200" />
             )}
 
             {/* Dot indicator */}
             <div
               className={`relative z-10 mt-1 h-4 w-4 flex-shrink-0 rounded-full border-2 ${
                 isCurrent
-                  ? 'border-blue-600 bg-blue-600'
-                  : 'border-gray-300 bg-white'
+                  ? 'border-primary-500 bg-primary-500'
+                  : 'border-slate-300 bg-white'
               }`}
             />
 
             {/* Content */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-slate-900">
                   v{version.version_number}
                 </span>
                 <Badge color={badge.color}>{badge.label}</Badge>
@@ -78,12 +78,12 @@ export function VersionTimeline({ projectId }: VersionTimelineProps) {
               </div>
 
               {version.edit_instruction && (
-                <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                <p className="mt-1 text-sm text-slate-600 line-clamp-2">
                   {version.edit_instruction}
                 </p>
               )}
 
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-slate-400">
                 {formatRelativeTime(version.created_at)}
               </p>
 
@@ -91,7 +91,7 @@ export function VersionTimeline({ projectId }: VersionTimelineProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="mt-1 px-0 text-xs text-blue-600 hover:text-blue-700"
+                  className="mt-1 px-0 text-xs text-primary-600 hover:text-primary-700 cursor-pointer"
                   loading={reverting === version.id}
                   onClick={() => handleRevert(version.id)}
                 >
