@@ -113,5 +113,5 @@ backend/
   tests/
   alembic/         # Migration scripts
 frontend/
-  # Next.js 14 App Router (in progress)
+  # Next.js 14 App Router
 ```
