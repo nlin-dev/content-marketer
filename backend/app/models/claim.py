@@ -16,16 +16,16 @@ from app.models.base import Base, TimestampMixin, generate_id
 
 
 class ClaimCategory(str, enum.Enum):
-    EFFICACY = "efficacy"
+    EFFICACY_OS = "efficacy_os"
+    EFFICACY_PFS = "efficacy_pfs"
     SAFETY = "safety"
-    MECHANISM = "mechanism"
+    MOA = "moa"
     DOSING = "dosing"
-    INDICATION = "indication"
-    SURVIVAL = "survival"
-    RESPONSE_RATE = "response_rate"
-    BIOMARKER = "biomarker"
-    COMBINATION = "combination"
-    QUALITY_OF_LIFE = "quality_of_life"
+    QOL = "qol"
+    SUBGROUPS = "subgroups"
+    DCR = "dcr"
+    UNMET_NEED = "unmet_need"
+    POSITIONING = "positioning"
 
 
 claim_sources = Table(
