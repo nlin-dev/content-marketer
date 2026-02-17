@@ -8,44 +8,60 @@ import { useNavigationStore } from '@/stores/navigation';
 import { useClaimsStore } from '@/stores/claims';
 import { useAssetsStore } from '@/stores/assets';
 import { useContentStore } from '@/stores/content';
+import { useComplianceStore } from '@/stores/compliance';
 import { getProject } from '@/lib/api';
 import { STEPS } from '@/lib/constants';
 import { Spinner } from '@/components/ui/Spinner';
+import { ConversationalBrief } from '@/components/brief/ConversationalBrief';
+import { ClaimDiscovery } from '@/components/claims/ClaimDiscovery';
+import { AssetPicker } from '@/components/assets/AssetPicker';
+import { ContentEditor } from '@/components/editor/ContentEditor';
+import { ExportPanel } from '@/components/export/ExportPanel';
+import { CompliancePanel } from '@/components/review/CompliancePanel';
+import { VersionTimeline } from '@/components/review/VersionTimeline';
+import { CommentThread } from '@/components/review/CommentThread';
 
-const STEP_COMPONENTS: Record<string, () => React.ReactNode> = {
-  brief: () => <Placeholder label="Brief" />,
-  claims: () => <Placeholder label="Claims" />,
-  assets: () => <Placeholder label="Assets" />,
-  generate: () => <Placeholder label="Generate" />,
-  review: () => <Placeholder label="Review" />,
-  export: () => <Placeholder label="Export" />,
+const STEP_COMPONENTS: Record<string, React.ComponentType> = {
+  brief: ConversationalBrief,
+  claims: ClaimDiscovery,
+  assets: AssetPicker,
+  generate: ContentEditor,
+  review: ContentEditor,
+  export: ExportPanel,
 };
 
-function Placeholder({ label }: { label: string }) {
-  return (
-    <div className="flex items-center justify-center h-64 text-gray-400 text-lg">
-      {label} step
-    </div>
-  );
+function SidePanel({ stepKey, projectId }: { stepKey: string; projectId: string }) {
+  if (stepKey === 'generate' || stepKey === 'review') {
+    return (
+      <div className="space-y-6">
+        <CompliancePanel />
+        <VersionTimeline projectId={projectId} />
+        <CommentThread />
+      </div>
+    );
+  }
+  return null;
 }
 
 export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const { project, setProject } = useProjectStore();
   const { currentStep, setStep } = useNavigationStore();
+  const resetClaims = useClaimsStore((s) => s.reset);
+  const resetAssets = useAssetsStore((s) => s.reset);
+  const resetContent = useContentStore((s) => s.reset);
+  const resetCompliance = useComplianceStore((s) => s.reset);
 
   useEffect(() => {
-    // Reset stores to avoid stale state
     setStep(0);
-    useClaimsStore.getState().clearSelected();
-    useAssetsStore.getState().clearSelected();
-    useContentStore.getState().setCurrentHtml('');
-    useContentStore.getState().setVersions([]);
-    useContentStore.getState().setCurrentVersionId(null);
+    resetClaims();
+    resetAssets();
+    resetContent();
+    resetCompliance();
     setProject(null);
 
     getProject(id).then(setProject).catch(console.error);
-  }, [id, setStep, setProject]);
+  }, [id, setStep, setProject, resetClaims, resetAssets, resetContent, resetCompliance]);
 
   const stepKey = STEPS[currentStep].key;
 
@@ -56,6 +72,8 @@ export default function ProjectPage() {
       </div>
     );
   }
+
+  const showSidePanel = stepKey === 'generate' || stepKey === 'review';
 
   return (
     <div className="flex flex-col h-[calc(100vh-52px)]">
@@ -68,11 +86,13 @@ export default function ProjectPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-y-auto p-6">
-          {STEP_COMPONENTS[stepKey]()}
+          {(() => { const StepComponent = STEP_COMPONENTS[stepKey]; return StepComponent ? <StepComponent /> : null; })()}
         </main>
-        <aside className="w-96 border-l overflow-y-auto p-4 bg-gray-50">
-          {/* Side panel — populated in later plans */}
-        </aside>
+        {showSidePanel && (
+          <aside className="w-96 border-l overflow-y-auto p-4 bg-gray-50">
+            <SidePanel stepKey={stepKey} projectId={id} />
+          </aside>
+        )}
       </div>
     </div>
   );

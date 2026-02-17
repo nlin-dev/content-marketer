@@ -9,6 +9,7 @@ interface ClaimsState {
   removeSelected: (id: string) => void;
   reorderSelected: (ids: string[]) => void;
   clearSelected: () => void;
+  reset: () => void;
 }
 
 export const useClaimsStore = create<ClaimsState>((set) => ({
@@ -35,4 +36,5 @@ export const useClaimsStore = create<ClaimsState>((set) => ({
       };
     }),
   clearSelected: () => set({ selected: [] }),
+  reset: () => set({ recommended: [], selected: [] }),
 }));

@@ -11,6 +11,7 @@ interface ContentState {
   setStreaming: (v: boolean) => void;
   setVersions: (v: VersionSummary[]) => void;
   setCurrentVersionId: (id: string | null) => void;
+  reset: () => void;
 }
 
 export const useContentStore = create<ContentState>((set) => ({
@@ -24,4 +25,5 @@ export const useContentStore = create<ContentState>((set) => ({
   setStreaming: (v) => set({ streaming: v }),
   setVersions: (v) => set({ versions: v }),
   setCurrentVersionId: (id) => set({ currentVersionId: id }),
+  reset: () => set({ currentHtml: '', streaming: false, versions: [], currentVersionId: null }),
 }));

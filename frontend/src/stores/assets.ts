@@ -8,6 +8,7 @@ interface AssetsState {
   addSelected: (asset: AssetResponse) => void;
   removeSelected: (id: string) => void;
   clearSelected: () => void;
+  reset: () => void;
 }
 
 export const useAssetsStore = create<AssetsState>((set) => ({
@@ -25,4 +26,5 @@ export const useAssetsStore = create<AssetsState>((set) => ({
       selected: state.selected.filter((a) => a.id !== id),
     })),
   clearSelected: () => set({ selected: [] }),
+  reset: () => set({ available: [], selected: [] }),
 }));
